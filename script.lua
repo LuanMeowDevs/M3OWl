@@ -773,6 +773,7 @@ local Tabs = {
   Main = Window:AddTab({Title = "🚀Farm", Icon = ""}),
   Melee = Window:AddTab({Title = "🥊Fighting Style", Icon = ""}),
   Quests = Window:AddTab({Title = "💎Items Farm", Icon = ""}),
+  Valentine = Window:AddTab({Title = "❤️Valentine", Icon = ""}),
   SeaEvent = Window:AddTab({Title = "🌊Sea Events", Icon = ""}),
   Mirage = Window:AddTab({Title = "🌴Mirage + RaceV4", Icon = ""}),
   Drago = Window:AddTab({Title = "🐉Drago Dojo", Icon = ""}),
