@@ -3751,6 +3751,139 @@ spawn(function()
         end
     end
 end)
+local AutoFlamingo = Tabs.Valentine:AddToggle("AutoFlamingo", {Title = "Auto Flamingo Delivery", Description = "", Default = false})
+AutoFlamingo:OnChanged(function(Value)
+    _G.AutoFlamingo = Value
+end)
+
+function getGameTime()
+    local t = game.Lighting:GetMinutesAfterMidnight()
+    local h = math.floor(t / 60)
+    local m = t % 60
+    return h, m
+end
+
+spawn(function()
+    while wait(.2) do
+        if _G.AutoFlamingo then
+            pcall(function()
+                local h, m = getGameTime()
+                if m >= 30 and m <= 40 then
+                    local npc = findNPC("ValentineDelivery")
+                    if npc then
+                        moveToNPC(npc)
+                        wait(1)
+                        interact(npc, "StartDelivery")
+                        wait(2)
+                        local char = game.Players.LocalPlayer.Character
+                        if char and char:FindFirstChild("Flamingo") then
+                            for _, ring in pairs(workspace:GetDescendants()) do
+                                if ring.Name == "Ring" and ring:IsA("Part") then
+                                    repeat
+                                        char.HumanoidRootPart.CFrame = ring.CFrame * CFrame.new(0,0,-5)
+                                        wait(0.1)
+                                    until (char.HumanoidRootPart.Position - ring.Position).Magnitude < 10
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+local AutoCupid = Tabs.Valentine:AddToggle("AutoCupid", {Title = "Auto Cupid Missions", Description = "", Default = false})
+AutoCupid:OnChanged(function(Value)
+    _G.AutoCupid = Value
+end)
+
+function getCurrentMissionObjective()
+    local player = game.Players.LocalPlayer
+    local gui = player.PlayerGui:FindFirstChild("QuestGUI") or player.PlayerGui:FindFirstChild("ValentineQuest")
+    if gui then
+        local desc = gui:FindFirstChild("Description") or gui:FindFirstChild("QuestDescription")
+        if desc then
+            local text = desc.Text
+            local count, enemy = text:match("Defeat (%d+) (.+)") or text:match("Hunt (%d+) (.+)") or text:match("Kill (%d+) (.+)")
+            if count and enemy then
+                return tonumber(count), enemy
+            end
+        end
+    end
+    return nil, nil
+end
+
+function getCupidPosition(sea)
+    if sea == 1 then
+        return CFrame.new(2764, 432, -7144)
+    elseif sea == 2 then
+        return CFrame.new(-1200, 25, -1700)
+    elseif sea == 3 then
+        return CFrame.new(2000, 50, 1000)
+    end
+    return CFrame.new(0,0,0)
+end
+
+function findEnemyByName(name)
+    for _,v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and v.Name == name and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+            return v
+        end
+    end
+    return nil
+end
+
+task.spawn(function()
+    while task.wait(0.2) do
+        if _G.AutoCupid then
+            pcall(function()
+                local cupid = findNPC("Cupid")
+                if not cupid then
+                    local sea = getSea()
+                    local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        hrp.CFrame = getCupidPosition(sea)
+                        task.wait(2)
+                        cupid = findNPC("Cupid")
+                    end
+                end
+                if cupid then
+                    local lastCupid = _G.LastCupidTime or 0
+                    if time() - lastCupid >= 18 * 3600 then
+                        moveToNPC(cupid)
+                        task.wait(1)
+                        interact(cupid, "AcceptMission")
+                        task.wait(2)
+                        
+                        local need, targetName = getCurrentMissionObjective()
+                        if need and targetName then
+                            local killed = 0
+                            while killed < need do
+                                local enemy = findEnemyByName(targetName)
+                                if enemy then
+                                    repeat
+                                        attack(enemy)
+                                        task.wait(0.5)
+                                    until not enemy or enemy.Humanoid.Health <= 0
+                                    killed = killed + 1
+                                    collectHearts()
+                                else
+                                    task.wait(1)
+                                end
+                            end
+                            moveToNPC(cupid)
+                            task.wait(1)
+                            interact(cupid, "TurnIn")
+                            _G.LastCupidTime = time()
+                        else
+                            task.wait(5)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
 
 Tabs.Mirage:AddSection("Mystic Island / Full Moon")
 FullMOOn = Tabs.Mirage:AddParagraph({Title = " FullMoon Status ",Content = ""})
