@@ -3703,53 +3703,216 @@ spawn(function()
     end
   end
 end)
-AutoValentineGacha = Tabs.Valentine:AddToggle("AutoValentineGacha", {Title = "Auto Random Valentine Gacha Dealer", Description = "", Default = false})
-AutoValentineGacha:OnChanged(function(Value)
-    _G.AutoValentineGacha = Value
-end)
-spawn(function()
-    while wait(0.5) do
-        pcall(function()
-            if _G.AutoValentineGacha then
-                replicated.Remotes.CommF_:InvokeServer("ValentineGacha","Roll")
-            end
-        end)
-    end
-end)
-AutoValentineDelivery = Tabs.Valentine:AddToggle("AutoValentineDelivery", {Title = "Auto Valentines Delivery", Description = "", Default = false})
-AutoValentineDelivery:OnChanged(function(Value)
-    _G.AutoValentineDelivery = Value
+AutoGacha = Tabs.Valentine:AddToggle("AutoGacha", {Title = "Auto Random Valentine Gacha Dealer", Description = "", Default = false})
+AutoGacha:OnChanged(function(Value)
+    _G.AutoGacha = Value
 end)
 
-spawn(function()
-    while wait(0.5) do
-        pcall(function()
-            if _G.AutoValentineDelivery then
-                local player = game.Players.LocalPlayer
-                local char = player.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    local hrp = char.HumanoidRootPart
-                    local flamingo = char:FindFirstChild("Flamingo")
-                    if not flamingo then
-                        replicated.Remotes.CommF_:InvokeServer("ValentineDelivery","Start")
-                        wait(2)
-                    else
-                        for _, ring in pairs(workspace:GetDescendants()) do
-                            if ring.Name == "Ring" and ring:IsA("Part") then
-                                hrp.CFrame = ring.CFrame * CFrame.new(0,0,-5)
-                                wait(0.3)
+function getSea()
+    local y = game.Players.LocalPlayer.Character.HumanoidRootPart.Position.Y
+    if y > 0 and y < 200 then return 1 end
+    if y < -500 then return 2 end
+    if y > 3000 then return 3 end
+    return 1
+end
+
+function getGachaPosition(sea)
+    if sea == 1 then
+        return CFrame.new(2764, 432, -7144)
+    elseif sea == 2 then
+        return CFrame.new(-1200, 25, -1700)
+    elseif sea == 3 then
+        return CFrame.new(2000, 50, 1000)
+    end
+end
+
+function findNPC(name)
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and v.Name == name and v:FindFirstChild("Humanoid") then
+            return v
+        end
+    end
+    return nil
+end
+
+function getHearts()
+    for _, gui in pairs(game.Players.LocalPlayer.PlayerGui:GetChildren()) do
+        if gui.Name == "ValentineGUI" or (gui:FindFirstChild("Hearts") and gui.Hearts:IsA("TextLabel")) then
+            return tonumber(gui.Hearts.Text) or 0
+        end
+    end
+    return 0
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoGacha then
+            pcall(function()
+                local sea = getSea()
+                local dealer = findNPC("ValentinesGachaDealer")
+                if not dealer then
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = getGachaPosition(sea)
+                    task.wait(2)
+                    dealer = findNPC("ValentinesGachaDealer")
+                end
+                if dealer and getHearts() >= 250 then
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = dealer.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+                    task.wait(0.5)
+                    local args = {dealer, "Roll"}
+                    game:GetService("ReplicatedStorage"):FindFirstChild("Interact"):FireServer(unpack(args))
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end
+end)
+AutoDelivery = Tabs.Valentine:AddToggle("AutoDelivery", {Title = "Auto Valentines Delivery", Description = "", Default = false})
+AutoDelivery:OnChanged(function(Value)
+    _G.AutoDelivery = Value
+end)
+
+function getSea()
+    local y = game.Players.LocalPlayer.Character.HumanoidRootPart.Position.Y
+    if y > 0 and y < 200 then return 1 end
+    if y < -500 then return 2 end
+    if y > 3000 then return 3 end
+    return 1
+end
+
+function getDeliveryPosition(sea)
+    if sea == 1 then
+        return CFrame.new(2764, 432, -7144)
+    elseif sea == 2 then
+        return CFrame.new(-1200, 25, -1700)
+    elseif sea == 3 then
+        return CFrame.new(2000, 50, 1000)
+    end
+end
+
+function findNPC(name)
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and v.Name == name and v:FindFirstChild("Humanoid") then
+            return v
+        end
+    end
+    return nil
+end
+
+function getGameTime()
+    local t = game.Lighting:GetMinutesAfterMidnight()
+    local m = t % 60
+    return m
+end
+
+function isInFlamingo()
+    local char = game.Players.LocalPlayer.Character
+    if not char then return false end
+    for _, v in pairs(char:GetChildren()) do
+        if v.Name:lower():find("flamingo") then
+            return true
+        end
+    end
+    return false
+end
+
+function findGoldenRings()
+    local rings = {}
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Part") and (v.Name:find("Ring") or v.Name:find("Arc") or v.Name:find("Golden")) then
+            table.insert(rings, v)
+        end
+    end
+    return rings
+end
+
+function moveSmoothlyTo(targetPos)
+    local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local distance = (hrp.Position - targetPos).Magnitude
+    if distance < 5 then return end
+    local steps = math.min(20, distance / 2)
+    for i = 1, steps do
+        local alpha = i / steps
+        local newPos = hrp.Position:Lerp(targetPos, alpha)
+        hrp.CFrame = CFrame.new(newPos)
+        task.wait(0.05)
+    end
+    hrp.CFrame = CFrame.new(targetPos)
+end
+
+task.spawn(function()
+    while task.wait(0.2) do
+        if _G.AutoDelivery then
+            pcall(function()
+                local m = getGameTime()
+                if m >= 30 and m <= 40 then
+                    local sea = getSea()
+                    local npc = findNPC("Valentines Delivery")
+                    if not npc then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = getDeliveryPosition(sea)
+                        task.wait(2)
+                        npc = findNPC("Valentines Delivery")
+                    end
+                    if npc then
+                        if not isInFlamingo() then
+                            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+                            task.wait(1)
+                            local args = {npc, "StartDelivery"}
+                            game:GetService("ReplicatedStorage"):FindFirstChild("Interact"):FireServer(unpack(args))
+                            task.wait(3)
+                        end
+                        if isInFlamingo() then
+                            local rings = findGoldenRings()
+                            if #rings > 0 then
+                                for _, ring in ipairs(rings) do
+                                    moveSmoothlyTo(ring.Position)
+                                    repeat
+                                        task.wait(0.1)
+                                        local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                                        if not hrp then break end
+                                        local dist = (hrp.Position - ring.Position).Magnitude
+                                    until dist < 10
+                                end
+                                task.wait(5)
                             end
                         end
                     end
                 end
-            end
-        end)
+            end)
+        end
     end
 end)
-AutoCupidMissions = Tabs.Valentine:AddToggle("AutoCupidMissions", {Title = "Auto Cupid Missions", Description = "", Default = false})
-AutoCupidMissions:OnChanged(function(Value)
-    _G.AutoCupidMissions = Value
+AutoCupid = Tabs.Valentine:AddToggle("AutoCupid", {Title = "Auto Cupid Missions", Description = "", Default = false})
+AutoCupid:OnChanged(function(Value)
+    _G.AutoCupid = Value
 end)
+
+function getSea()
+    local y = game.Players.LocalPlayer.Character.HumanoidRootPart.Position.Y
+    if y > 0 and y < 200 then return 1 end
+    if y < -500 then return 2 end
+    if y > 3000 then return 3 end
+    return 1
+end
+
+function getCupidPosition(sea)
+    if sea == 1 then
+        return CFrame.new(2764, 432, -7144)
+    elseif sea == 2 then
+        return CFrame.new(-1200, 25, -1700)
+    elseif sea == 3 then
+        return CFrame.new(2000, 50, 1000)
+    end
+end
+
+function findNPC(name)
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and v.Name == name and v:FindFirstChild("Humanoid") then
+            return v
+        end
+    end
+    return nil
+end
 
 function getCurrentMissionObjective()
     local player = game.Players.LocalPlayer
@@ -3784,15 +3947,10 @@ function attack(target)
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     hrp.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
-    wait(0.1)
+    task.wait(0.1)
     local tool = char:FindFirstChildOfClass("Tool")
     if tool and tool:FindFirstChild("Click") then
         tool:Activate()
-    else
-        local combat = require(player.PlayerScripts:FindFirstChild("CombatFramework"))
-        if combat and combat.attack then
-            combat.attack()
-        end
     end
 end
 
@@ -3802,42 +3960,57 @@ function collectHearts()
             local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 hrp.CFrame = obj.CFrame
-                wait(0.1)
+                task.wait(0.1)
             end
         end
     end
 end
 
-spawn(function()
-    while wait(0.5) do
-        pcall(function()
-            if _G.AutoCupidMissions then
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoCupid then
+            pcall(function()
                 local lastCupid = _G.LastCupidTime or 0
                 if time() - lastCupid >= 18 * 3600 then
-                    replicated.Remotes.CommF_:InvokeServer("Cupid","AcceptMission")
-                    wait(2)
-                    local need, targetName = getCurrentMissionObjective()
-                    if need and targetName then
-                        local killed = 0
-                        while killed < need do
-                            local enemy = findEnemyByName(targetName)
-                            if enemy then
-                                repeat
-                                    attack(enemy)
-                                    wait(0.5)
-                                until not enemy or enemy.Humanoid.Health <= 0
-                                killed = killed + 1
-                                collectHearts()
-                            else
-                                wait(1)
+                    local sea = getSea()
+                    local cupid = findNPC("Cupid")
+                    if not cupid then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = getCupidPosition(sea)
+                        task.wait(2)
+                        cupid = findNPC("Cupid")
+                    end
+                    if cupid then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = cupid.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+                        task.wait(1)
+                        local args = {cupid, "AcceptMission"}
+                        game:GetService("ReplicatedStorage"):FindFirstChild("Interact"):FireServer(unpack(args))
+                        task.wait(2)
+                        local need, targetName = getCurrentMissionObjective()
+                        if need and targetName then
+                            local killed = 0
+                            while killed < need do
+                                local enemy = findEnemyByName(targetName)
+                                if enemy then
+                                    repeat
+                                        attack(enemy)
+                                        task.wait(0.5)
+                                    until not enemy or enemy.Humanoid.Health <= 0
+                                    killed = killed + 1
+                                    collectHearts()
+                                else
+                                    task.wait(1)
+                                end
                             end
+                            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = cupid.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+                            task.wait(1)
+                            local args2 = {cupid, "TurnIn"}
+                            game:GetService("ReplicatedStorage"):FindFirstChild("Interact"):FireServer(unpack(args2))
+                            _G.LastCupidTime = time()
                         end
-                        replicated.Remotes.CommF_:InvokeServer("Cupid","TurnIn")
-                        _G.LastCupidTime = time()
                     end
                 end
-            end
-        end)
+            end)
+        end
     end
 end)
 
