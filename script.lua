@@ -1,12 +1,21 @@
 task.spawn(function()
     repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
+    local player = game.Players.LocalPlayer
+    repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     task.wait(1)
-    local success, err = pcall(function()
-        local remote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_")
-        remote:InvokeServer("SetTeam", "Pirates")
-    end)
-    if not success then
-        warn("Falha ao definir time:", err)
+    local remote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+    if remote then
+        remote = remote:FindFirstChild("CommF_")
+    end
+    if remote then
+        local success, err = pcall(function()
+            remote:InvokeServer("SetTeam", "Pirates")
+        end)
+        if not success then
+            warn("Falha ao definir time:", err)
+        end
+    else
+        warn("Remote CommF_ não encontrado")
     end
 end)
 task.spawn(function()
@@ -6996,3 +7005,4 @@ task.spawn(function()
   end)
 end)
 Window:SelectTab(1)
+
